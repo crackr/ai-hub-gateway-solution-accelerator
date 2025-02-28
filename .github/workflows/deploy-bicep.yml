@@ -55,5 +55,5 @@ jobs:
             --parameters environmentName=${{ secrets.AZURE_ENV_NAME }} \
                          deploymentCapacity=${{ secrets.OPENAI_CAPACITY }} \
                          entraAuth=${{ secrets.AZURE_ENTRA_AUTH }} \
-                         tenantId=${{ secrets.AZURE_TENANT_ID }} \
+                         entraTenantId=${{ secrets.AZURE_TENANT_ID }} \
                          @./infra/main.parameters.json
