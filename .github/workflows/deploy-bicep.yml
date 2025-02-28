@@ -27,9 +27,13 @@ jobs:
         run: |
           sed -i 's|${AZURE_LOCATION}|${{ secrets.AZURE_LOCATION }}|g' ./infra/main.parameters.json
 
-      - name: Replace OPENAI_CAPACITY in Parameters File
+      - name: Replace OPENAI_CAPACITY in Parameters File (Ensure Integer)
         run: |
           sed -i 's|"value": "${OPENAI_CAPACITY}"|"value": '${{ secrets.OPENAI_CAPACITY }}'|g' ./infra/main.parameters.json
+
+      - name: Replace ENTRA_AUTH in Parameters File (Ensure Boolean)
+        run: |
+          sed -i 's|"value": "${AZURE_ENTRA_AUTH}"|"value": '${{ secrets.AZURE_ENTRA_AUTH }}'|g' ./infra/main.parameters.json
 
       - name: Deploy Bicep file
         run: |
