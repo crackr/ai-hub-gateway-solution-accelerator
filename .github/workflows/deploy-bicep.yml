@@ -19,6 +19,14 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Debug AZURE_LOCATION
+        run: |
+          echo "AZURE_LOCATION=$(echo ${{ secrets.AZURE_LOCATION }} | sed 's/./& /g')"
+
+      - name: Replace AZURE_LOCATION in Parameters File
+        run: |
+          sed -i 's|${AZURE_LOCATION}|${{ secrets.AZURE_LOCATION }}|g' ./infra/main.parameters.json
+
       - name: Deploy Bicep file
         run: |
           az deployment sub create \
