@@ -25,6 +25,7 @@ jobs:
           echo "AZURE_LOCATION=${{ secrets.AZURE_LOCATION }}"
           echo "OPENAI_CAPACITY=${{ secrets.OPENAI_CAPACITY }}"
           echo "AZURE_ENTRA_AUTH=${{ secrets.AZURE_ENTRA_AUTH }}"
+          echo "AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}"
 
       - name: Replace AZURE_ENV_NAME in Parameters File
         run: |
@@ -33,6 +34,10 @@ jobs:
       - name: Replace AZURE_LOCATION in Parameters File
         run: |
           sed -i 's|${AZURE_LOCATION}|${{ secrets.AZURE_LOCATION }}|g' ./infra/main.parameters.json
+
+      - name: Replace AZURE_TENANT_ID in Parameters File
+        run: |
+          sed -i 's|${AZURE_TENANT_ID}|${{ secrets.AZURE_TENANT_ID }}|g' ./infra/main.parameters.json
 
       - name: Replace OPENAI_CAPACITY in Parameters File (Ensure Integer)
         run: |
@@ -50,4 +55,5 @@ jobs:
             --parameters environmentName=${{ secrets.AZURE_ENV_NAME }} \
                          deploymentCapacity=${{ secrets.OPENAI_CAPACITY }} \
                          entraAuth=${{ secrets.AZURE_ENTRA_AUTH }} \
+                         tenantId=${{ secrets.AZURE_TENANT_ID }} \
                          @./infra/main.parameters.json
