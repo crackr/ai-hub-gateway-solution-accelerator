@@ -1,55 +1,48 @@
-# Run when commits are pushed to main
-trigger:
-  - main
+name: Deploy Bicep to Azure
 
-pool:
-  vmImage: ubuntu-latest
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allows manual trigger
 
-steps:
-  # setup-azd@0 needs to be manually installed in your organization
-  # if you can't install it, you can use the below bash script to install azd
-  # and remove this step
-  - task: setup-azd@0
-    displayName: Install azd
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-  # If you can't install above task in your organization, you can comment it and uncomment below task to install azd
-  # - task: Bash@3
-  #   displayName: Install azd
-  #   inputs:
-  #     targetType: 'inline'
-  #     script: |
-  #       curl -fsSL https://aka.ms/install-azd.sh | bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  # azd delegate auth to az to use service connection with AzureCLI@2
-  - pwsh: |
-      azd config set auth.useAzCliAuth "true"
-    displayName: Configure AZD to Use AZ CLI Authentication.
-  - task: AzureCLI@2
-    displayName: Provision Infrastructure
-    inputs:
-      azureSubscription: azconnection
-      scriptType: bash
-      scriptLocation: inlineScript
-      keepAzSessionActive: true
-      inlineScript: |
-        azd provision --no-prompt
-    env:
-      AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
-      AZURE_ENV_NAME: $(AZURE_ENV_NAME)
-      AZURE_LOCATION: $(AZURE_LOCATION)
-      AZD_INITIAL_ENVIRONMENT_CONFIG: $(AZD_INITIAL_ENVIRONMENT_CONFIG)
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-  - task: AzureCLI@2
-    displayName: Deploy Application
-    inputs:
-      azureSubscription: azconnection
-      scriptType: bash
-      scriptLocation: inlineScript
-      keepAzSessionActive: true
-      inlineScript: |
-        azd deploy --no-prompt
-    env:
-      AZURE_SUBSCRIPTION_ID: $(AZURE_SUBSCRIPTION_ID)
-      AZURE_ENV_NAME: $(AZURE_ENV_NAME)
-      AZURE_LOCATION: $(AZURE_LOCATION)
+      - name: Debug Variables
+        run: |
+          echo "AZURE_LOCATION=$(echo ${{ secrets.AZURE_LOCATION }} | sed 's/./& /g')"
+          echo "AZURE_ENV_NAME=$(echo ${{ secrets.AZURE_ENV_NAME }} | sed 's/./& /g')"
 
+      - name: Replace AZURE_ENV_NAME in Parameters File
+        run: |
+          sed -i 's|${AZURE_ENV_NAME}|${{ secrets.AZURE_ENV_NAME }}|g' ./infra/main.parameters.json
+
+      - name: Replace AZURE_LOCATION in Parameters File
+        run: |
+          sed -i 's|${AZURE_LOCATION}|${{ secrets.AZURE_LOCATION }}|g' ./infra/main.parameters.json
+
+      - name: Replace OPENAI_CAPACITY in Parameters File (Ensure Integer)
+        run: |
+          sed -i 's|"value": "${OPENAI_CAPACITY}"|"value": '${{ secrets.OPENAI_CAPACITY }}'|g' ./infra/main.parameters.json
+
+      - name: Replace ENTRA_AUTH in Parameters File (Ensure Boolean)
+        run: |
+          sed -i 's|"value": "${AZURE_ENTRA_AUTH}"|"value": '${{ secrets.AZURE_ENTRA_AUTH }}'|g' ./infra/main.parameters.json
+
+      - name: Deploy Bicep file
+        run: |
+          az deployment sub create \
+            --location "${{ secrets.AZURE_LOCATION }}" \
+            --template-file ./infra/main.bicep \
+            --parameters ./infra/main.parameters.json
